@@ -26,4 +26,4 @@ const schemeProductSchema = new mongoose.Schema({
 
 });
 
-export default mongoose.model("SchemeProduct", schemeProductSchema);
+export default mongoose.model("SchemeProduct",schemeProductSchema);
