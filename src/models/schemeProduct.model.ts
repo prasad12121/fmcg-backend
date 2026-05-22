@@ -6,7 +6,6 @@ const schemeProductSchema = new mongoose.Schema({
     type:mongoose.Schema.Types.ObjectId,
     ref:"Scheme"
   },
-
   variant_id:{
     type:mongoose.Schema.Types.ObjectId,
     ref:"Variant"
