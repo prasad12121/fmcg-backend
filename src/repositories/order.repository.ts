@@ -278,6 +278,60 @@ class OrderRepository extends BaseRepository<any> {
     }
   }
 
+  async findOrdersWithInvoice(filter: Record<string, unknown> = {}) {
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: filter },
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "order_id",
+          as: "invoice",
+        },
+      },
+      {
+        $unwind: {
+          path: "$invoice",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "outlets",
+          localField: "outlet_id",
+          foreignField: "_id",
+          as: "outlet",
+        },
+      },
+      {
+        $unwind: {
+          path: "$outlet",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          order_number: 1,
+          outlet_id: 1,
+          distributor_id: 1,
+          status: 1,
+          order_date: 1,
+          subtotal: 1,
+          gst: 1,
+          grand_total: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          invoice_id: "$invoice._id",
+          invoice_number: "$invoice.invoice_number",
+          outlet_name: "$outlet.name",
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ];
+
+    return this.model.aggregate(pipeline).exec();
+  }
+
   async getDispatchReadyOrders(filters: {
     beat_id?: string;
     outlet_id?: string;

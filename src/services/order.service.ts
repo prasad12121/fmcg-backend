@@ -43,7 +43,7 @@ class OrderService {
   }
 
   async getOrders(filter: Record<string, any> = {}) {
-    return await orderRepository.find(filter, ["outlet_id"]);
+    return await orderRepository.findOrdersWithInvoice(filter);
   }
 
   async getOrder(id: string) {
