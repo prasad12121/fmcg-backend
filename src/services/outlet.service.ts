@@ -11,7 +11,7 @@ class OutletService {
   }
 
   async getOutlet(id: string) {
-    return await outletRepository.findById(id);
+    return await outletRepository.findById(id, "beat_id");
   }
 
   async updateOutlet(id: string, data: any) {

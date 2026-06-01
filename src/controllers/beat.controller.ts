@@ -17,10 +17,18 @@ export const getBeats = async (req = request, res = response) => {
   try {
 
     const search = req.query.search?.toString() || "";
+    const area_id = req.query.area_id?.toString();
+    const city_id = req.query.city_id?.toString();
 
-    const filter = search
+    const filter: Record<string, unknown> = search
       ? { name: { $regex: search, $options: "i" } }
       : {};
+
+    if (area_id) {
+      filter.area_id = area_id;
+    } else if (city_id) {
+      filter.city_id = city_id;
+    }
 
     const beats = await beatService.getBeats(filter);
     res.status(200).json(beats);

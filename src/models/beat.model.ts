@@ -26,13 +26,6 @@ const beatSchema = new mongoose.Schema(
             required: true,
         },
 
-        subarea_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "SubArea",
-            required: true,
-        },
-
-
     name: {
       type: String,
       required: true,

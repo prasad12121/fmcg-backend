@@ -61,12 +61,6 @@ const outletSchema = new mongoose.Schema(
       required: true,
     },
 
-    subarea_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubArea",
-      required: true,
-    },
-
     contact_person: {
       type: String,
       required: true,
