@@ -7,7 +7,11 @@ class AreaService {
   }
 
   async getAreas(filter: Record<string, any> = {}) {
-    return await areaRepository.find(filter);
+    return await areaRepository.find(filter, [
+      "country_id",
+      "state_id",
+      "city_id",
+    ]);
   }
 
   async getArea(id: string) {

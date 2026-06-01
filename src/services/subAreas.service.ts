@@ -7,7 +7,12 @@ class SubAreaService {
   }
 
   async getSubAreas(filter: Record<string, any> = {}) {
-    return await subAreaRepository.find(filter);
+    return await subAreaRepository.find(filter, [
+      "country_id",
+      "state_id",
+      "city_id",
+      "area_id",
+    ]);
   }
 
   async getSubArea(id: string) {
