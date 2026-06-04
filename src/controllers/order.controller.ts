@@ -9,7 +9,16 @@ export const createOrder = async (req = request, res = response) => {
     const order = await orderService.createOrder(req.body);
     res.status(201).json(order);
   } catch (error) {
-    res.status(500).json({ message: "Error creating order", error });
+    const message =
+      error instanceof Error ? error.message : "Error creating order";
+    const isClientError =
+      message.includes("required") ||
+      message.includes("items must") ||
+      message.includes("Insufficient stock") ||
+      message.includes("Invalid quantity") ||
+      message.includes("variant_id");
+
+    res.status(isClientError ? 400 : 500).json({ message });
   }
 };
 

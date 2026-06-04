@@ -1,42 +1,131 @@
+import mongoose from "mongoose";
 import orderRepository from "../repositories/order.repository";
 import orderItemRepository from "../repositories/orderItem.repository";
 import schemeService from "./scheme.service";
 import stockRepository from "../repositories/stock.repository";
+import variantRepository from "../repositories/variant.repository";
 
 import stockService from "./stock.service";
 
+const normalizeVariantId = (value: unknown): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  return String(value);
+};
+
+const variantDisplayName = (
+  variant: { name?: string; sku_code?: string } | null,
+  fallbackId: string
+) => {
+  const name = variant?.name?.trim();
+  if (name) return name;
+  const sku = variant?.sku_code?.trim();
+  if (sku) return sku;
+  return fallbackId;
+};
+
+const buildVariantLabelMap = async (
+  rawIds: unknown[]
+): Promise<Map<string, string>> => {
+  const ids = [
+    ...new Set(
+      rawIds
+        .map(normalizeVariantId)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    ),
+  ];
+
+  const labels = new Map<string, string>();
+  for (const id of ids) {
+    labels.set(id, id);
+  }
+
+  if (!ids.length) {
+    return labels;
+  }
+
+  const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+  const variants = await variantRepository.find({ _id: { $in: objectIds } });
+
+  for (const variant of variants) {
+    const id = String((variant as { _id: unknown })._id);
+    labels.set(id, variantDisplayName(variant, id));
+  }
+
+  return labels;
+};
+
 class OrderService {
   async createOrder(data: any) {
+    if (!data?.outlet_id) {
+      throw new Error("outlet_id is required");
+    }
+    if (!data?.distributor_id) {
+      throw new Error("distributor_id is required");
+    }
+    if (!Array.isArray(data.items) || data.items.length === 0) {
+      throw new Error("items must be a non-empty array");
+    }
+
     const orderNumber = `ORD-${Date.now()}`;
     const order = await orderRepository.create({
-      ...data,
+      outlet_id: data.outlet_id,
+      distributor_id: data.distributor_id,
+      subtotal: data.subtotal,
+      total_discount: data.total_discount ?? 0,
+      total_tax: data.total_tax ?? data.gst ?? 0,
+      gst: data.gst ?? data.total_tax ?? 0,
+      grand_total: data.grand_total,
+      status: data.status ?? "pending",
       order_number: orderNumber,
     });
 
+    const variantLabels = await buildVariantLabelMap(
+      data.items.map((item: { variant_id?: unknown }) => item.variant_id)
+    );
+    const labelFor = (variantId: unknown) =>
+      variantLabels.get(normalizeVariantId(variantId)) ??
+      normalizeVariantId(variantId);
+
     for (const item of data.items) {
+      if (!item?.variant_id) {
+        throw new Error("Each item must include variant_id");
+      }
+
+      const variantLabel = labelFor(item.variant_id);
+      const quantity = Number(item.quantity);
+      if (!Number.isFinite(quantity) || quantity < 1) {
+        throw new Error(`Invalid quantity for ${variantLabel}`);
+      }
+
       const stock = await stockService.getStocks(
         data.distributor_id,
         item.variant_id,
       );
-      
-      if (stock.length === 0 || stock[0].quantity < item.quantity) {
-        throw new Error(`Stock not sufficient for variant ${item.variant_id}`);
+
+      if (stock.length === 0 || stock[0].quantity < quantity) {
+        const available = stock[0]?.quantity ?? 0;
+        throw new Error(
+          `Insufficient stock for ${variantLabel}: requested ${quantity}, available ${available}`
+        );
       }
 
       const schemaResult = await schemeService.applyScheme(
         item.variant_id,
-        item.quantity,
+        quantity,
       );
-      if (!schemaResult) {
-        throw new Error(`Stock not sufficient for variant ${item.variant_id}`);
-      }
 
       await orderItemRepository.create({
         order_id: order._id,
         variant_id: item.variant_id,
-        quantity: item.quantity,
-        free_quantity: schemaResult.freeQty,
+        quantity,
+        free_quantity:
+          item.free_quantity ?? schemaResult?.freeQty ?? 0,
         price: item.price,
+        discount: item.discount ?? 0,
       });
     }
     return order;
@@ -133,11 +222,22 @@ class OrderService {
     if (order.status !== "invoiced") {
       throw new Error("Only invoiced orders can be dispatched");
     }
-    for (const item of order.items) {
+
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const variantLabels = await buildVariantLabelMap(
+      orderItems.map((item: { variant_id?: unknown }) => item.variant_id)
+    );
+    const labelFor = (variantId: unknown) =>
+      variantLabels.get(normalizeVariantId(variantId)) ??
+      normalizeVariantId(variantId);
+
+    for (const item of orderItems) {
       const stock = await stockRepository.findByVariant(item.variant_id);
 
       if (stock.quantity < item.quantity) {
-        throw new Error(`Insufficient stock for variant ${item.variant_id}`);
+        throw new Error(
+          `Insufficient stock for ${labelFor(item.variant_id)}: requested ${item.quantity}, available ${stock.quantity}`
+        );
       }
       await stockRepository.update(stock._id, {
         quantity: stock.quantity - item.quantity,
