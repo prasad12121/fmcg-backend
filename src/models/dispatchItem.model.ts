@@ -16,6 +16,10 @@ const dispatchItemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Invoice",
     },
+    outlet_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Outlet",
+    },
     variant_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Variant",

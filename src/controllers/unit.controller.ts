@@ -14,15 +14,13 @@ export const createUnit = async (req: Request, res: Response) => {
 export const getUnits = async (req: Request, res: Response) => {
 try {
     const search = req.query.search?.toString() || "";
-    const category_id = req.query.category_id?.toString();
+   
 
-    const filter: { name?: { $regex: string; $options: string }; category_id?: string } = search
+    const filter: { name?: { $regex: string; $options: string } } = search
       ? { name: { $regex: search, $options: "i" } }
       : {};
 
-       if (category_id) {
-      filter.category_id = category_id;
-    }
+ 
 
     const units = await unitService.getUnits(filter);
 

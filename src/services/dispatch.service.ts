@@ -87,33 +87,32 @@ export class DispatchService {
             throw new Error("Vehicle or driver not found");
         }
 
-        const createdDispatches = [];
+        // Create a single delivery (dispatch) for the whole save action. All
+        // selected orders — even across different outlets — are grouped under it.
+        const dispatch = await dispatchRepository.create({
+            dispatch_date: new Date(),
+            vehicle_number: vehicle.vehicle_number,
+            driver_name: driver.name,
+            beat_id: data.beat_id,
+            status: "dispatched",
+        });
 
         for (const orderId of orderIds) {
             const order = await orderRepository.findById(orderId);
-            const invoice = await invoiceRepository.findByOrderId(orderId);
-            const orderItems = await orderItemRepository.find({ order_id: orderId });
 
             if (!order) {
                 throw new Error(`Order not found for ${orderId}`);
             }
 
-            const dispatch = await dispatchRepository.create({
-                order_id: orderId,
-                invoice_id: invoice?._id,
-                dispatch_date: new Date(),
-                vehicle_number: vehicle.vehicle_number,
-                driver_name: driver.name,
-                outlet_id: order.outlet_id,
-                beat_id: data.beat_id,
-                status: "dispatched",
-            });
+            const invoice = await invoiceRepository.findByOrderId(orderId);
+            const orderItems = await orderItemRepository.find({ order_id: orderId });
 
             for (const item of orderItems) {
                 await dispatchItemRepository.create({
                     dispatch_id: dispatch._id,
                     order_id: orderId,
                     invoice_id: invoice?._id,
+                    outlet_id: order.outlet_id,
                     variant_id: item.variant_id,
                     ordered_qty: item.quantity,
                     dispatched_qty: item.quantity,
@@ -127,10 +126,9 @@ export class DispatchService {
             }
 
             await orderRepository.update(orderId, { status: "dispatched" });
-            createdDispatches.push(dispatch);
         }
 
-        return createdDispatches;
+        return dispatch;
     }
     async getDispatches(filter: Record<string, any> = {}) {
         return await dispatchRepository.getDispatchesForTable(filter);
@@ -152,6 +150,12 @@ export class DispatchService {
             const dispatch = await dispatchRepository.findById(id);
             if (!dispatch) {
                 throw new Error("Dispatch not found");
+            }
+
+            // Legacy fallback for single-order dispatches created before the
+            // multi-order grouping change. New dispatches always have items.
+            if (!dispatch.order_id) {
+                return [];
             }
 
             const orderItems = await orderItemRepository.find({ order_id: String(dispatch.order_id) });
@@ -199,10 +203,23 @@ export class DispatchService {
 
         const dispatchItems = await dispatchItemRepository.findByDispatchId(id);
         const submittedItems = Array.isArray(data.items) ? data.items : [];
-        const order = await orderRepository.findById(dispatch.order_id);
 
-        if (!order) {
-            throw new Error("Order not found");
+        // A delivery can span multiple orders/outlets, so preload every related
+        // order once and resolve distributor / status updates per order.
+        const orderIds = [
+            ...new Set(
+                dispatchItems
+                    .map((item: any) => (item.order_id ? String(item.order_id) : ""))
+                    .filter(Boolean)
+            ),
+        ];
+
+        const orderMap = new Map<string, any>();
+        for (const orderId of orderIds) {
+            const order = await orderRepository.findById(orderId);
+            if (order) {
+                orderMap.set(orderId, order);
+            }
         }
 
         let allDelivered = true;
@@ -243,12 +260,15 @@ export class DispatchService {
             const deliveredDelta = deliveredQty - Number(dispatchItem.delivered_qty || 0);
 
             if (deliveredDelta !== 0) {
-                await this.applyDeliveryStockDelta({
-                    distributor_id: String(order.distributor_id),
-                    variant_id: String(dispatchItem.variant_id),
-                    dispatch_id: String(dispatch._id),
-                    delta: deliveredDelta,
-                });
+                const relatedOrder = orderMap.get(String(dispatchItem.order_id));
+                if (relatedOrder) {
+                    await this.applyDeliveryStockDelta({
+                        distributor_id: String(relatedOrder.distributor_id),
+                        variant_id: String(dispatchItem.variant_id),
+                        dispatch_id: String(dispatch._id),
+                        delta: deliveredDelta,
+                    });
+                }
             }
 
             if (shortQty > 0 || deliveredQty !== dispatchItem.dispatched_qty) {
@@ -269,9 +289,11 @@ export class DispatchService {
             status: nextDispatchStatus,
         });
 
-        await orderRepository.update(String(dispatch.order_id), {
-            status: nextDispatchStatus === "delivered" ? "delivered" : "dispatched",
-        });
+        for (const orderId of orderIds) {
+            await orderRepository.update(orderId, {
+                status: nextDispatchStatus === "delivered" ? "delivered" : "dispatched",
+            });
+        }
 
         return await dispatchRepository.findById(id);
     }

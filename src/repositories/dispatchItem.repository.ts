@@ -43,10 +43,53 @@ class DispatchItemRepository extends BaseRepository<any> {
         },
       },
       {
+        $lookup: {
+          from: "outlets",
+          localField: "outlet_id",
+          foreignField: "_id",
+          as: "outlet",
+        },
+      },
+      {
+        $unwind: {
+          path: "$outlet",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "order_id",
+          foreignField: "_id",
+          as: "order",
+        },
+      },
+      {
+        $unwind: {
+          path: "$order",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "invoice_id",
+          foreignField: "_id",
+          as: "invoice",
+        },
+      },
+      {
+        $unwind: {
+          path: "$invoice",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
         $project: {
           _id: 1,
           order_id: 1,
           invoice_id: 1,
+          outlet_id: 1,
           variant_id: 1,
           ordered_qty: 1,
           dispatched_qty: 1,
@@ -60,6 +103,9 @@ class DispatchItemRepository extends BaseRepository<any> {
           variant_name: "$variant.name",
           sku_code: "$variant.sku_code",
           pack_size: "$variant.pack_size",
+          outlet_name: "$outlet.name",
+          order_number: "$order.order_number",
+          invoice_number: "$invoice.invoice_number",
         },
       },
       {

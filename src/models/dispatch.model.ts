@@ -2,10 +2,11 @@ import mongoose from "mongoose";
 
 const dispatchSchema = new mongoose.Schema(
   {
+    // A single delivery can group orders from multiple outlets, so order/outlet
+    // are tracked per dispatch item rather than on the dispatch itself.
     order_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
-      required: true,
     },
     invoice_id: {
       type: mongoose.Schema.Types.ObjectId,

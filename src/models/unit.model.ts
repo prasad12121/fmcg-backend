@@ -3,11 +3,7 @@ import mongoose from "mongoose";
 const unitSchema = new mongoose.Schema(
   {
     
-    category_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "UnitCategory",
-        required: true,
-    },
+  
 
     name: {
         type: String,

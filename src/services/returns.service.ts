@@ -32,21 +32,25 @@ class ReturnsService {
       throw new Error("Dispatch not found");
     }
 
-    const order = await orderRepository.findById(String(dispatch.order_id));
-
-    if (!order) {
-      throw new Error("Order not found");
-    }
+    // A delivery can span multiple orders/outlets, so the order is resolved from
+    // each dispatch item (cached) rather than a single field on the dispatch.
+    const orderCache = new Map<string, any>();
+    const resolveOrder = async (orderId: string) => {
+      if (!orderId) return null;
+      if (orderCache.has(orderId)) return orderCache.get(orderId);
+      const loaded = await orderRepository.findById(orderId);
+      orderCache.set(orderId, loaded);
+      return loaded;
+    };
 
     const resolvedItems: Array<{
       input: ReturnItemInput;
       dispatchItem: any;
       returnQty: number;
+      order: any;
     }> = [];
 
     const returnItemsForDoc: any[] = [];
-
-    console.log("items in createReturn", items);
 
     for (const item of items) {
       const dispatchItem = await dispatchItemRepository.findById(String(item.dispatch_item_id));
@@ -54,6 +58,11 @@ class ReturnsService {
 
       if (!dispatchItem) {
         throw new Error(`Dispatch item not found: ${item.dispatch_item_id}`);
+      }
+
+      const order = await resolveOrder(String(dispatchItem.order_id));
+      if (!order) {
+        throw new Error(`Order not found for dispatch item ${item.dispatch_item_id}`);
       }
 
       const returnQty = Number(item.return_qty);
@@ -71,7 +80,7 @@ class ReturnsService {
         throw new Error(`Return quantity exceeds delivered quantity for variant ${dispatchItem.variant_id}`);
       }
 
-      resolvedItems.push({ input: item, dispatchItem, returnQty });
+      resolvedItems.push({ input: item, dispatchItem, returnQty, order });
       returnItemsForDoc.push({
         dispatch_item_id: dispatchItem._id,
         variant_id: dispatchItem.variant_id,
@@ -84,12 +93,18 @@ class ReturnsService {
     }
 
     // Create exactly one Return doc with embedded items (return.model.ts expects return_items[]).
-    
+    // Header order/invoice/outlet come from the first returned item; the form-provided
+    // order_id takes precedence when present.
+    const primary = resolvedItems[0];
+    const headerOrderId = data.order_id || primary?.dispatchItem?.order_id || primary?.order?._id;
+    const headerInvoiceId = primary?.dispatchItem?.invoice_id;
+    const headerOutletId = primary?.dispatchItem?.outlet_id || primary?.order?.outlet_id;
+
     const returnEntry = await returnsRepository.create({
       dispatch_id: dispatch._id,
-      order_id: dispatch.order_id,
-      invoice_id: dispatch.invoice_id,
-      outlet_id: dispatch.outlet_id || order.outlet_id,
+      order_id: headerOrderId,
+      invoice_id: headerInvoiceId,
+      outlet_id: headerOutletId,
       return_number: `RET-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`,
       return_date: new Date(),
       reason: data.reason || "",
@@ -106,7 +121,7 @@ class ReturnsService {
       ],
     });
 
-    for (const { input, dispatchItem, returnQty } of resolvedItems) {
+    for (const { input, dispatchItem, returnQty, order } of resolvedItems) {
 
       await dispatchItemRepository.update(String(dispatchItem._id), {
         returned_qty: Number(dispatchItem.returned_qty || 0) + returnQty,
