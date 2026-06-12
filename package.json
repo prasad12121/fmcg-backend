@@ -26,7 +26,8 @@
     "seed:invoices": "ts-node seeder/invoiceSeeder.ts",
     "seed:vehicles": "ts-node seeder/vehicleSeeder.ts",
     "seed:drivers": "ts-node seeder/driverSeeder.ts",
-    "seed:dispatches": "ts-node seeder/dispatchSeeder.ts"
+    "seed:dispatches": "ts-node seeder/dispatchSeeder.ts",
+    "migrate:variantFields": "ts-node seeder/backfillVariantFields.ts"
   },
   "keywords": [],
   "author": "",

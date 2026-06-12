@@ -8,6 +8,11 @@ const productPriceSchema = new mongoose.Schema({
     required:true
   },
 
+  cost_price:{
+    type:Number,
+    default:0
+  },
+
   mrp:{
     type:Number,
     required:true

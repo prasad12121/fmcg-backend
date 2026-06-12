@@ -59,7 +59,21 @@ class VariantService {
   }
 
   async getVariant(id: string) {
-    return await variantRepository.findById(id);
+    // Populate the base unit and join the variant's pricing so the edit screen
+    // has a single, reliable source for every field (price + GST + packaging).
+    const variant = await variantRepository.findById(id, "unit_id");
+    if (!variant) return null;
+
+    const price = await productPriceModel.findOne({ variant_id: id });
+
+    return {
+      ...variant.toObject(),
+      cost_price: price?.cost_price ?? 0,
+      mrp: price?.mrp ?? 0,
+      distributor_price: price?.distributor_price ?? 0,
+      retailer_price: price?.retailer_price ?? 0,
+      price_id: price?._id ?? null,
+    };
   }
 
   async updateVariant(id: string, data: any) {

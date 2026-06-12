@@ -27,11 +27,45 @@ const variantSchema = new mongoose.Schema(
       trim: true,
     },
 
+    barcode: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    hsn_code: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    gst_rate: {
+      type: Number,
+      default: 0,
+    },
+
     unit_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Unit",
       required: true,
     },
+
+    // Packaging / UOM hierarchy (e.g. Packet -> Patti -> Box).
+    // The base level has is_base=true and factor=1; every higher level stores
+    // `conversion` (units per parent step) and `factor` (cumulative base units).
+    uom_levels: [
+      {
+        _id: false,
+        name: { type: String, trim: true },
+        unit_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Unit",
+        },
+        conversion: { type: Number, default: 1 },
+        factor: { type: Number, default: 1 },
+        is_base: { type: Boolean, default: false },
+      },
+    ],
 
     weight: {
       type: Number,
