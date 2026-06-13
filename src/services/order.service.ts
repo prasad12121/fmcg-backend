@@ -58,6 +58,32 @@ const buildVariantLabelMap = async (
   return labels;
 };
 
+/** Map of variant_id -> GST rate (%) from the variant master. */
+const buildVariantGstMap = async (
+  rawIds: unknown[]
+): Promise<Map<string, number>> => {
+  const ids = [
+    ...new Set(
+      rawIds
+        .map(normalizeVariantId)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    ),
+  ];
+
+  const map = new Map<string, number>();
+  if (!ids.length) return map;
+
+  const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+  const variants = await variantRepository.find({ _id: { $in: objectIds } });
+
+  for (const variant of variants) {
+    const id = String((variant as { _id: unknown })._id);
+    map.set(id, Number((variant as { gst_rate?: number }).gst_rate ?? 0));
+  }
+
+  return map;
+};
+
 class OrderService {
   async createOrder(data: any) {
     if (!data?.outlet_id) {
@@ -86,9 +112,16 @@ class OrderService {
     const variantLabels = await buildVariantLabelMap(
       data.items.map((item: { variant_id?: unknown }) => item.variant_id)
     );
+    const variantGstMap = await buildVariantGstMap(
+      data.items.map((item: { variant_id?: unknown }) => item.variant_id)
+    );
     const labelFor = (variantId: unknown) =>
       variantLabels.get(normalizeVariantId(variantId)) ??
       normalizeVariantId(variantId);
+
+    let computedSubtotal = 0;
+    let computedDiscount = 0;
+    let computedTax = 0;
 
     for (const item of data.items) {
       if (!item?.variant_id) {
@@ -118,17 +151,55 @@ class OrderService {
         quantity,
       );
 
+      // Per-line GST from the variant master (defaults to 0 when unset).
+      const gstRate =
+        variantGstMap.get(normalizeVariantId(item.variant_id)) ?? 0;
+      const price = Number(item.price) || 0;
+      const discount = Number(item.discount ?? 0) || 0;
+      const lineAmount = price * quantity;
+      const lineTaxable = Math.max(lineAmount - discount, 0);
+      const lineTax = Number(((lineTaxable * gstRate) / 100).toFixed(2));
+
+      computedSubtotal += lineAmount;
+      computedDiscount += discount;
+      computedTax += lineTax;
+
       await orderItemRepository.create({
         order_id: order._id,
         variant_id: item.variant_id,
         quantity,
+        base_quantity: Number(item.base_quantity ?? quantity),
+        uom_quantities: Array.isArray(item.uom_quantities)
+          ? item.uom_quantities
+          : [],
         free_quantity:
           item.free_quantity ?? schemaResult?.freeQty ?? 0,
-        price: item.price,
-        discount: item.discount ?? 0,
+        price,
+        discount,
+        gst_rate: gstRate,
+        tax: lineTax,
+        total: Number((lineAmount - discount).toFixed(2)),
       });
     }
-    return order;
+
+    // Recompute order totals server-side so tax reflects per-variant GST
+    // rather than any flat rate sent by the client.
+    const finalSubtotal = Number(computedSubtotal.toFixed(2));
+    const finalDiscount = Number(computedDiscount.toFixed(2));
+    const finalTax = Number(computedTax.toFixed(2));
+    const finalGrandTotal = Number(
+      (finalSubtotal - finalDiscount + finalTax).toFixed(2)
+    );
+
+    const updatedOrder = await orderRepository.update(order._id, {
+      subtotal: finalSubtotal,
+      total_discount: finalDiscount,
+      total_tax: finalTax,
+      gst: finalTax,
+      grand_total: finalGrandTotal,
+    });
+
+    return updatedOrder ?? order;
   }
 
   async getOrders(filter: Record<string, any> = {}) {

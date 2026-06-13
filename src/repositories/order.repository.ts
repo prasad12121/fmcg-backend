@@ -15,8 +15,9 @@ class OrderRepository extends BaseRepository<any> {
 
     const products = await orderItemModel.find({ order_id: objectId }).populate({
       path: "variant_id",
-      select: "name sku_code pack_size unit_id weight status"
-    }).select("variant_id quantity free_quantity price")
+      select: "name sku_code pack_size unit_id weight status uom_levels gst_rate",
+      populate: { path: "unit_id", select: "name" }
+    }).select("variant_id quantity base_quantity uom_quantities free_quantity price gst_rate")
       .lean();
 
     const order = await orderModel
@@ -27,8 +28,11 @@ class OrderRepository extends BaseRepository<any> {
     const formattedProducts = products.map((item) => ({
       variant: item.variant_id,
       quantity: item.quantity,
+      base_quantity: item.base_quantity,
+      uom_quantities: item.uom_quantities,
       free_quantity: item.free_quantity,
       price: item.price,
+      gst_rate: item.gst_rate,
     }));
 
     return {
@@ -252,12 +256,26 @@ class OrderRepository extends BaseRepository<any> {
         if (!item.variant_id) {
           throw new Error("variant_id missing");
         }
-  
+
+        const quantity = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const discount = Number(item.discount ?? 0) || 0;
+        const rate = Number(item.gst_rate ?? 0) || 0;
+        const lineTaxable = Math.max(price * quantity - discount, 0);
+
         return {
           order_id: id,
           variant_id: item.variant_id,
-          quantity: item.quantity,
-          price: item.price,
+          quantity,
+          base_quantity: Number(item.base_quantity ?? quantity),
+          uom_quantities: Array.isArray(item.uom_quantities)
+            ? item.uom_quantities
+            : [],
+          price,
+          discount,
+          gst_rate: rate,
+          tax: Number(((lineTaxable * rate) / 100).toFixed(2)),
+          total: Number((price * quantity - discount).toFixed(2)),
         };
       });
   

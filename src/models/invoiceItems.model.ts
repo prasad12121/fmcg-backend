@@ -16,6 +16,15 @@ const invoiceItemSchema = new mongoose.Schema({
     default: 0
   },
   price: Number,
+  // GST % applied to this line (from the variant master) and the tax amount.
+  gst_rate: {
+    type: Number,
+    default: 0
+  },
+  tax: {
+    type: Number,
+    default: 0
+  },
   total: Number
 }, { timestamps: true, versionKey: false });
 

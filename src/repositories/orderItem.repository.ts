@@ -24,7 +24,7 @@ class OrderItemRepository extends BaseRepository<any> {
         path: "variant_id",
         select: "name sku_code pack_size unit_id weight status",
       })
-      .select("order_id variant_id quantity free_quantity price discount tax total")
+      .select("order_id variant_id quantity base_quantity uom_quantities free_quantity price discount gst_rate tax total")
       .sort({ createdAt: -1 })
       .lean();
   }

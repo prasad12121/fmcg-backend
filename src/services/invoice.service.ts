@@ -20,24 +20,38 @@ class InvoiceService {
 
     if (!items.length) throw new Error("No order items found");
 
-    // ✅ Calculate totals
+    // ✅ Calculate totals with per-line GST taken from the order item
+    // (snapshot of the variant master). Legacy items created before GST was
+    // stored have no rate, so they fall back to 18% for backward compatibility.
     let subtotal = 0;
+    let tax = 0;
 
     const invoiceItemsData = items.map(item => {
       const total = item.price * item.quantity;
+      const discount = Number(item.discount ?? 0) || 0;
+      const rate =
+        item.gst_rate === undefined || item.gst_rate === null
+          ? 18
+          : Number(item.gst_rate) || 0;
+      const lineTaxable = Math.max(total - discount, 0);
+      const lineTax = Number(((lineTaxable * rate) / 100).toFixed(2));
+
       subtotal += total;
+      tax += lineTax;
 
       return {
         variant_id: item.variant_id,
         quantity: item.quantity,
         free_quantity: item.free_quantity || 0,
         price: item.price,
+        gst_rate: rate,
+        tax: lineTax,
         total
       };
     });
 
-    const tax = subtotal * 0.18; // GST 18%
-    const grand_total = subtotal + tax;
+    tax = Number(tax.toFixed(2));
+    const grand_total = Number((subtotal + tax).toFixed(2));
     const randomNumber = Math.floor(100000 + Math.random() * 900000);
 
     // ✅ Create invoice
