@@ -165,9 +165,19 @@ class ReturnsService {
       }
     }
 
-    await dispatchRepository.update(String(dispatch._id), {
-      status: "returned",
-    });
+    // Only close the whole dispatch when every delivered item has been fully
+    // returned; otherwise leave it returnable for the remaining quantities.
+    const remainingItems: any[] = await dispatchItemRepository.findByDispatchId(String(dispatch._id));
+    const deliveredItems = remainingItems.filter((it: any) => Number(it.delivered_qty || 0) > 0);
+    const fullyReturned =
+      deliveredItems.length > 0 &&
+      deliveredItems.every((it: any) => Number(it.returned_qty || 0) >= Number(it.delivered_qty || 0));
+
+    if (fullyReturned) {
+      await dispatchRepository.update(String(dispatch._id), {
+        status: "returned",
+      });
+    }
 
     return returnEntry;
   }
@@ -180,6 +190,5 @@ class ReturnsService {
     return await returnsRepository.findById(id);
   }
 }
-
 
 export default new ReturnsService();
