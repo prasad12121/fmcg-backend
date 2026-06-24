@@ -33,6 +33,7 @@ import dispatchRoutes from "./routes/dispatch.routes";
 import returnsRoutes from "./routes/returns.routes";
 import paymentRoutes from "./routes/payment.routes";
 import schemeRoutes from "./routes/scheme.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 
 connectDB();
 
@@ -103,6 +104,7 @@ app.use("/api/dispatches", dispatchRoutes);
 app.use("/api/returns", returnsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/schemes", schemeRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use(
   (

@@ -19,8 +19,8 @@ router.post(
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters"),
   body("role")
-    .isIn(["Distributor", "outlet"])
-    .withMessage("Role must be Distributor or outlet"),
+    .isIn(["SuperAdmin", "Distributor", "outlet"])
+    .withMessage("Role must be SuperAdmin, Distributor, or outlet"),
   handleValidation,
   asyncHandler(register)
 );

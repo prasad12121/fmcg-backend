@@ -1,11 +1,40 @@
+import bcrypt from "bcryptjs";
 import { request, response } from "express";
 
+import User from "../models/user.model";
 import distributorService from "../services/distributor.service";
 
 
 export const createDistributor = async (req = request, res = response) => {
   try {
-    const distributor = await distributorService.createDistributor(req.body);
+    const { password, email, name, ...rest } = req.body;
+
+    // 1. Create the Distributor business record
+    const distributor = await distributorService.createDistributor({ ...rest, email, name, password });
+
+    // 2. Create a linked User account so the distributor can log in
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (!existingUser) {
+      const passwordHash = await bcrypt.hash(String(password), 12);
+      await User.create({
+        name: String(name),
+        email: normalizedEmail,
+        passwordHash,
+        role: "Distributor",
+        distributor_id: (distributor as any)._id,
+        isVerified: true,
+      });
+    } else {
+      // Link existing user to this distributor
+      await User.findByIdAndUpdate(existingUser._id, {
+        role: "Distributor",
+        distributor_id: (distributor as any)._id,
+        isVerified: true,
+      });
+    }
+
     res.status(201).json(distributor);
   } catch (error) {
     res.status(500).json({ message: "Error creating distributor", error });

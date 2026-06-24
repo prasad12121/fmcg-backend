@@ -21,8 +21,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Distributor", "outlet"],
+      enum: ["SuperAdmin", "Distributor", "outlet"],
       default: "outlet",
+    },
+    distributor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Distributor",
+      default: null,
     },
     authCode: {
       type: String,

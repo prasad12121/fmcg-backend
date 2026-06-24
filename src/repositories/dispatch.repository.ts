@@ -15,6 +15,7 @@ class DispatchRepository extends BaseRepository<any> {
         outlet_id?: string;
         status?: string;
         search?: string;
+        distributor_id?: string;
     } = {}) {
         // A delivery groups items from one or more orders/outlets. Build summary
         // fields (order/outlet counts and names) from the related dispatch items.
@@ -75,6 +76,11 @@ class DispatchRepository extends BaseRepository<any> {
 
         if (filters.outlet_id && mongoose.Types.ObjectId.isValid(filters.outlet_id)) {
             matchStage["items.outlet_id"] = new mongoose.Types.ObjectId(filters.outlet_id);
+        }
+
+        // Scope dispatches to orders belonging to a specific distributor
+        if (filters.distributor_id && mongoose.Types.ObjectId.isValid(filters.distributor_id)) {
+            matchStage["orders.distributor_id"] = new mongoose.Types.ObjectId(filters.distributor_id);
         }
 
         if (filters.status) {

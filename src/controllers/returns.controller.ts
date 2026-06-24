@@ -1,5 +1,7 @@
 import { request, response } from "express";
+import mongoose from "mongoose";
 
+import Order from "../models/order.model";
 import returnsService from "../services/returns.service";
 
 export const createReturn = async (req = request, res = response) => {
@@ -27,6 +29,16 @@ export const getReturns = async (req = request, res = response) => {
     const filter: Record<string, any> = {};
     if (typeof req.query.dispatch_id === "string" && req.query.dispatch_id) {
       filter.dispatch_id = req.query.dispatch_id;
+    }
+
+    // Distributor: scope returns to their orders only (via dispatch → order → distributor_id)
+    if (req.user?.role === "Distributor" && req.user.distributor_id) {
+      const orders = await Order.find(
+        { distributor_id: new mongoose.Types.ObjectId(req.user.distributor_id) },
+        { _id: 1 }
+      ).lean();
+      const orderIds = orders.map((o: any) => o._id.toString());
+      filter._distributor_order_ids = orderIds; // passed to service for filtering
     }
 
     const returns = await returnsService.getReturns(filter);

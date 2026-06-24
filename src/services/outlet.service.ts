@@ -7,7 +7,7 @@ class OutletService {
   }
 
   async getOutlets(filter: Record<string, any> = {}) {
-    return await outletRepository.find(filter,["beat_id"]);
+    return await outletRepository.find(filter, ["beat_id", "distributor_id"]);
   }
 
   async getOutlet(id: string) {

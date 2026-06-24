@@ -1,7 +1,7 @@
 import express from "express";
-
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
 import {
-
   createOrder,
   getOrders,
   getOrder,
@@ -15,8 +15,11 @@ import {
   getDispatchReadyOrders,
 } from "../controllers/order.controller";
 
-
 const router = express.Router();
+
+// All authenticated roles can access orders
+router.use(authenticate, authorize("SuperAdmin", "Distributor", "outlet"));
+
 router.post("/", createOrder);
 router.post("/items-by-ids", getItemsByOrderIds);
 router.get("/", getOrders);

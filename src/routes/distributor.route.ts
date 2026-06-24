@@ -1,7 +1,7 @@
 import express from "express";
-
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
 import {
-
   createDistributor,
   getDistributors,
   getDistributor,
@@ -11,6 +11,9 @@ import {
 } from "../controllers/distributor.controller";
 
 const router = express.Router();
+
+// All distributor management is SuperAdmin only
+router.use(authenticate, authorize("SuperAdmin"));
 
 router.post("/", createDistributor);
 router.get("/", getDistributors);

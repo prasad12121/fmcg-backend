@@ -26,11 +26,17 @@ export const getOrders = async (req = request, res = response) => {
   try {
     const search = req.query.search?.toString() || "";
 
-    let filter = {};
+    const filter: Record<string, any> = {};
 
     if (search && mongoose.Types.ObjectId.isValid(search)) {
-      filter = { _id: new mongoose.Types.ObjectId(search) };
+      filter._id = new mongoose.Types.ObjectId(search);
     }
+
+    // Distributor sees only their own orders
+    if (req.user?.role === "Distributor" && req.user.distributor_id) {
+      filter.distributor_id = new mongoose.Types.ObjectId(req.user.distributor_id);
+    }
+
     const orders = await orderService.getOrders(filter);
 
     res.status(200).json(orders);

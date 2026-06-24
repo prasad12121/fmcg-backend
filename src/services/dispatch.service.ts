@@ -138,6 +138,7 @@ export class DispatchService {
         outlet_id?: string;
         status?: string;
         search?: string;
+        distributor_id?: string;
     } = {}) {
         return await dispatchRepository.getDispatchesForTable(filters);
     }

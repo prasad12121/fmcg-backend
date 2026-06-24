@@ -7,7 +7,7 @@ class DistributorService {
   }
 
   async getDistributors(filter: Record<string, any> = {}) {
-    return await distributorRepository.find(filter);
+    return await distributorRepository.find(filter, ["area_id", "city_id"]);
   }
 
   async getDistributor(id: string) {

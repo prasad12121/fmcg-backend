@@ -10,6 +10,7 @@ const sanitizeUser = (user: any) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  distributor_id: user.distributor_id ?? null,
   isVerified: user.isVerified,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,

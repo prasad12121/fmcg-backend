@@ -142,6 +142,12 @@ const outletSchema = new mongoose.Schema(
       required: true,
     },
 
+    distributor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Distributor",
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["active", "inactive"],

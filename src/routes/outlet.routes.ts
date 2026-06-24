@@ -1,7 +1,7 @@
 import express from "express";
-
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
 import {
-
   createOutlet,
   getOutlets,
   getOutlet,
@@ -11,6 +11,9 @@ import {
 } from "../controllers/outlet.controller";
 
 const router = express.Router();
+
+// SuperAdmin and Distributor can manage outlets
+router.use(authenticate, authorize("SuperAdmin", "Distributor"));
 
 router.post("/", createOutlet);
 router.get("/", getOutlets);

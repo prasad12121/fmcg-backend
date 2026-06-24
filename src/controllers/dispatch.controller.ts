@@ -17,19 +17,26 @@ export const createDispatch = async (req = request, res = response) => {
 export const getDispatches = async (req = request, res = response) => {
     try {
         const beat_id = typeof req.query.beat_id === "string" ? req.query.beat_id : undefined;
-        const outlet_id = typeof req.query.outlet_id === "string" ? req.query.outlet_id : undefined;
         const status = typeof req.query.status === "string" ? req.query.status : undefined;
         const search = typeof req.query.search === "string" ? req.query.search : undefined;
+
+        // For Distributor: scope to their outlet_ids only
+        let outlet_id = typeof req.query.outlet_id === "string" ? req.query.outlet_id : undefined;
+        let distributor_id: string | undefined;
+
+        if (req.user?.role === "Distributor" && req.user.distributor_id) {
+            distributor_id = req.user.distributor_id;
+        }
 
         const dispatches = await dispatchService.getDispatchesForTable({
             beat_id,
             outlet_id,
             status,
             search,
+            distributor_id,
         });
         res.status(200).json(dispatches);
     } catch (error) {
-
         res.status(500).json({ message: "Error fetching dispatches", error });
     }
 };

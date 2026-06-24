@@ -1,18 +1,20 @@
-//create a routes for dispatch model
-
 import express from "express";
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
 import {
-    createDispatch,
-    confirmDelivery,
-    getDispatchItems,
-    getDispatches,
-    getDispatch,
-    updateDispatch,
-    deleteDispatch,
-    updateDispatchStatus,
+  createDispatch,
+  confirmDelivery,
+  getDispatchItems,
+  getDispatches,
+  getDispatch,
+  updateDispatch,
+  deleteDispatch,
+  updateDispatchStatus,
 } from "../controllers/dispatch.controller";
 
 const router = express.Router();
+
+router.use(authenticate, authorize("SuperAdmin", "Distributor"));
 
 router.post("/", createDispatch);
 router.get("/", getDispatches);
