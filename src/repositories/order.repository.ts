@@ -181,6 +181,21 @@ class OrderRepository extends BaseRepository<any> {
           preserveNullAndEmptyArrays: true,
         },
       },
+      // 🔹 Join beat (via outlet.beat_id)
+      {
+        $lookup: {
+          from: "beats",
+          localField: "outlet.beat_id",
+          foreignField: "_id",
+          as: "beat",
+        },
+      },
+      {
+        $unwind: {
+          path: "$beat",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
       // 🔹 Unwind distributor
       {
         $unwind: {
@@ -203,6 +218,7 @@ class OrderRepository extends BaseRepository<any> {
           invoice_number: { $first: "$invoice.invoice_number" },
           outlet_name: { $first: "$outlet.name" },
           outlet_id: { $first: "$outlet_id" },
+          beat_name: { $first: "$beat.name" },
           distributor_name: { $first: "$distributor.name" },
           distributor_id: { $first: "$distributor_id" },
           status: { $first: "$status" },
