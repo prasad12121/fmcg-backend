@@ -6,12 +6,17 @@ const brandSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
-      validate : {
-        validator: function(v) {
-          return /^[A-Za-z\s&-]+$/.test(v); // Only allows letters, numbers, and spaces
+      validate: {
+        validator: function (v: string) {
+          return /^[A-Za-z\s&-]+$/.test(v);
         },
       },
+    },
+    distributor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Distributor",
+      default: null,
+      index: true,
     },
     status: {
       type: String,
@@ -24,6 +29,9 @@ const brandSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
+
+// Compound unique: brand name is unique per distributor
+brandSchema.index({ name: 1, distributor_id: 1 }, { unique: true });
 
 const Brand = mongoose.model("Brand", brandSchema);
 export default Brand;

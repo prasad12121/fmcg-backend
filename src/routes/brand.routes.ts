@@ -1,14 +1,10 @@
 import express from "express";
-import {
-  createBrand,
-  getBrands,
-  getBrand,
-  updateBrand,
-  deleteBrand,
-  updateBrandStatus
-} from "../controllers/brand.controller";
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
+import { createBrand, getBrands, getBrand, updateBrand, deleteBrand, updateBrandStatus } from "../controllers/brand.controller";
 
 const router = express.Router();
+router.use(authenticate, authorize("SuperAdmin", "Distributor"));
 
 router.post("/", createBrand);
 router.get("/", getBrands);

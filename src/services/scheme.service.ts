@@ -22,8 +22,8 @@ class SchemeService {
     return this.getSchemeById(String(scheme._id));
   }
 
-  async getSchemes() {
-    return schemeRepository.find();
+  async getSchemes(filter: Record<string, unknown> = {}) {
+    return schemeRepository.find(filter);
   }
 
   async getSchemeById(id: string) {
@@ -106,5 +106,6 @@ class SchemeService {
     return schemeRepository.update(id, { status: body.status });
   }
 }
+
 
 export default new SchemeService();

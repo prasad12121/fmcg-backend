@@ -1,14 +1,10 @@
 import express from "express";
-import {
-  createPayment,
-  getPaymentById,
-  getPayments,
-  updatePayment,
-} from "../controllers/payment.controller";
-
-
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
+import { createPayment, getPayments, getPaymentById, updatePayment } from "../controllers/payment.controller";
 
 const router = express.Router();
+router.use(authenticate, authorize("SuperAdmin", "Distributor"));
 
 router.post("/", createPayment);
 router.get("/", getPayments);

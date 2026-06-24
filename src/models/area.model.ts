@@ -7,37 +7,41 @@ const areaSchema = new mongoose.Schema(
       ref: "Country",
       required: true,
     },
-
     state_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "State",
       required: true,
     },
-
     city_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "City",
       required: true,
     },
-
     name: {
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
-
+    distributor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Distributor",
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],
       default: "active",
     },
   },
-
   {
     timestamps: true,
     versionKey: false,
   }
 );
 
-export default mongoose.model("Area", areaSchema);
+// Compound unique: area name is unique per city per distributor
+areaSchema.index({ name: 1, city_id: 1, distributor_id: 1 }, { unique: true });
+
+const Area = mongoose.model("Area", areaSchema);
+export default Area;

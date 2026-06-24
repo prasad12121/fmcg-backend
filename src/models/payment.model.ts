@@ -57,7 +57,6 @@ const paymentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
-      
     },
     total_paid: {
       type: Number,
@@ -69,9 +68,15 @@ const paymentSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    // Stamped at creation from the related order — enables direct distributor scoping
+    distributor_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Distributor",
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true, versionKey: false }
 );
 
 export default mongoose.model("Payment", paymentSchema);
-

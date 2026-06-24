@@ -1,16 +1,10 @@
 import express from "express";
-
-import {
-
-  createUnit,
-  getUnits,
-  getUnitById,
-  updateUnit,
-  deleteUnit,
-  updateUnitStatus,
-} from "../controllers/unit.controller";
+import { authenticate } from "../middleware/auth";
+import { authorize } from "../middleware/role";
+import { createUnit, getUnits, getUnitById, updateUnit, deleteUnit, updateUnitStatus } from "../controllers/unit.controller";
 
 const router = express.Router();
+router.use(authenticate, authorize("SuperAdmin", "Distributor"));
 
 router.post("/", createUnit);
 router.get("/", getUnits);
