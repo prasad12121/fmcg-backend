@@ -344,6 +344,20 @@ class OrderRepository extends BaseRepository<any> {
         },
       },
       {
+        $lookup: {
+          from: "distributors",
+          localField: "distributor_id",
+          foreignField: "_id",
+          as: "distributor",
+        },
+      },
+      {
+        $unwind: {
+          path: "$distributor",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
         $project: {
           order_number: 1,
           outlet_id: 1,
@@ -358,6 +372,7 @@ class OrderRepository extends BaseRepository<any> {
           invoice_id: "$invoice._id",
           invoice_number: "$invoice.invoice_number",
           outlet_name: "$outlet.name",
+          distributor_name: "$distributor.name",
         },
       },
       { $sort: { createdAt: -1 } },

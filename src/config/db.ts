@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { fixIndexes } from "../utils/fixIndexes";
 
 
 /*
@@ -12,6 +13,9 @@ export const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI as string);
     console.log("MongoDB Connected here");
+    // Drop any stale global unique indexes that conflict with per-distributor
+    // compound indexes (safe to run on every startup — idempotent).
+    await fixIndexes();
   } catch (error) {
     console.error("MongoDB Connection Failed:", error);
     process.exit(1);

@@ -25,6 +25,7 @@ export const createOrder = async (req = request, res = response) => {
 export const getOrders = async (req = request, res = response) => {
   try {
     const search = req.query.search?.toString() || "";
+    const distributor_id = req.query.distributor_id?.toString() || "";
 
     const filter: Record<string, any> = {};
 
@@ -35,6 +36,11 @@ export const getOrders = async (req = request, res = response) => {
     // Distributor sees only their own orders
     if (req.user?.role === "Distributor" && req.user.distributor_id) {
       filter.distributor_id = new mongoose.Types.ObjectId(req.user.distributor_id);
+    }
+
+    // SuperAdmin can optionally filter by a specific distributor
+    if (req.user?.role === "SuperAdmin" && distributor_id && mongoose.Types.ObjectId.isValid(distributor_id)) {
+      filter.distributor_id = new mongoose.Types.ObjectId(distributor_id);
     }
 
     const orders = await orderService.getOrders(filter);
