@@ -45,6 +45,7 @@ export const createOutlet = async (req = request, res = response) => {
     if (error.code === 11000) {
       const keyPattern = error.keyPattern || {};
       const fieldLabelMap: Record<string, string> = {
+        name:          "Outlet Name",
         outlet_number: "Outlet Code",
         email:         "Email",
         username:      "Username",
@@ -151,6 +152,7 @@ export const updateOutlet = async (req = request, res = response) => {
     if (error.code === 11000) {
       const keyPattern = error.keyPattern || {};
       const fieldLabelMap: Record<string, string> = {
+        name:          "Outlet Name",
         outlet_number: "Outlet Code",
         email:         "Email",
         username:      "Username",

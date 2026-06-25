@@ -14,6 +14,8 @@ export const createScheme = async (req = request, res = response) => {
     const scheme = await schemeService.createScheme(data);
     res.status(201).json(scheme);
   } catch (error: any) {
+    if (error.code === 11000)
+      return res.status(409).json({ message: "Scheme name already exists for this distributor." });
     res.status(500).json({ message: "Error creating scheme", error: error.message });
   }
 };
@@ -61,6 +63,8 @@ export const updateScheme = async (req = request, res = response) => {
     if (!scheme) return res.status(404).json({ message: "Scheme not found" });
     res.status(200).json(scheme);
   } catch (error: any) {
+    if (error.code === 11000)
+      return res.status(409).json({ message: "Scheme name already exists for this distributor." });
     res.status(500).json({ message: "Error updating scheme", error: error.message });
   }
 };

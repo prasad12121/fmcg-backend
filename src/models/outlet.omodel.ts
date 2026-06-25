@@ -6,7 +6,6 @@ const outletSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     open_time: {
@@ -27,7 +26,6 @@ const outletSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
     outlet_type: {
       type: String,
@@ -159,6 +157,10 @@ const outletSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
+
+// Outlet name and outlet_number unique per distributor — different distributors may share the same values
+outletSchema.index({ name: 1, distributor_id: 1 }, { unique: true });
+outletSchema.index({ outlet_number: 1, distributor_id: 1 }, { unique: true });
 
 const Outlet = mongoose.model("Outlet", outletSchema);
 export default Outlet;

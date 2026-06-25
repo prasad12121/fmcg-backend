@@ -28,4 +28,7 @@ const schemeSchema = new mongoose.Schema(
   { timestamps: true, versionKey: false }
 );
 
+// Scheme name unique per distributor — different distributors may share the same name
+schemeSchema.index({ name: 1, distributor_id: 1 }, { unique: true });
+
 export default mongoose.model("Scheme", schemeSchema);

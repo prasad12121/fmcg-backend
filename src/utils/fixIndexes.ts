@@ -21,6 +21,9 @@
  *   units       { name: 1 }  { symbol: 1 }
  *   variants    { sku_code: 1 }
  *   areas       { name: 1 }  { name: 1, city_id: 1 }
+ *   beats       { name: 1 }  { name: 1, area_id: 1 }
+ *   products    { name: 1 }
+ *   outlets     { name: 1 }  { outlet_number: 1 }
  */
 
 import mongoose from "mongoose";
@@ -104,6 +107,27 @@ export async function fixIndexes(): Promise<void> {
   const areas = db.collection("areas");
   await dropIfExists(areas, { name: 1 });
   await dropIfExists(areas, { name: 1, city_id: 1 });
+
+  // ── beats ─────────────────────────────────────────────────────────────────
+  // Old possibilities: { name: 1 } unique  OR  { name: 1, area_id: 1 } unique
+  // New: { name: 1, area_id: 1, distributor_id: 1 } unique
+  const beats = db.collection("beats");
+  await dropIfExists(beats, { name: 1 });
+  await dropIfExists(beats, { name: 1, area_id: 1 });
+
+  // ── products ──────────────────────────────────────────────────────────────
+  // Old: { name: 1 } unique
+  // New: { name: 1, distributor_id: 1 } unique
+  const products = db.collection("products");
+  await dropIfExists(products, { name: 1 });
+
+  // ── outlets ───────────────────────────────────────────────────────────────
+  // Old: { name: 1 } unique  AND  { outlet_number: 1 } unique
+  // New: { name: 1, distributor_id: 1 } unique
+  //      { outlet_number: 1, distributor_id: 1 } unique
+  const outlets = db.collection("outlets");
+  await dropIfExists(outlets, { name: 1 });
+  await dropIfExists(outlets, { outlet_number: 1 });
 
   console.log("[fixIndexes] Index cleanup complete.");
 }
