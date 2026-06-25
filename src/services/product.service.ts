@@ -1,13 +1,22 @@
 import productRepository from "../repositories/product.repository";
+import productModel from "../models/Productmodel";
 
 class ProductService {
+  constructor() {
+    // One-time cleanup: legacy documents where distributor_id was stored as a
+    // plain string (e.g. "" from form) cause a Mongoose CastError during populate.
+    // Fix all to null on service init — becomes a no-op once the data is clean.
+    productModel
+      .updateMany({ distributor_id: { $type: "string" } }, { $set: { distributor_id: null } })
+      .catch((err) => console.error("[ProductService] distributor_id cleanup failed:", err));
+  }
 
   async createProduct(data: any) {
     return await productRepository.create(data);
   }
 
   async getProducts(filter: Record<string, any> = {}) {
-    return await productRepository.find(filter);
+    return await productRepository.find(filter, ["distributor_id"]);
   }
 
   async getProduct(id: string) {

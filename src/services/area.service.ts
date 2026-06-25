@@ -11,6 +11,7 @@ class AreaService {
       "country_id",
       "state_id",
       "city_id",
+      "distributor_id",
     ]);
   }
 

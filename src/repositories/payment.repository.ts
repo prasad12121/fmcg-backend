@@ -16,6 +16,7 @@ class PaymentRepository extends BaseRepository<any> {
       .populate("invoice_id", "invoice_number grand_total status")
       .populate("order_id", "order_number status")
       .populate("outlet_id", "name")
+      .populate("distributor_id", "name")
       .sort({ createdAt: -1 });
   }
 
@@ -24,7 +25,8 @@ class PaymentRepository extends BaseRepository<any> {
       .findById(id)
       .populate("invoice_id", "invoice_number grand_total status")
       .populate("order_id", "order_number status")
-      .populate("outlet_id", "name");
+      .populate("outlet_id", "name")
+      .populate("distributor_id", "name");
   }
 
   async getNextPaymentNumber() {

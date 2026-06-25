@@ -7,7 +7,7 @@ class UnitService {
   }
 
   async getUnits(filter: Record<string, any> = {}) {
-    return await unitRepository.find(filter);
+    return await unitRepository.find(filter, ["distributor_id"]);
   }
 
   async getUnit(id: string) {

@@ -77,9 +77,25 @@ export const getDistributor = async (req = request, res = response) => {
 //Update a distributor by ID
 export const updateDistributor = async (req = request, res = response) => {
   try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { password, ...rest } = req.body;
 
-     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const distributor = await distributorService.updateDistributor(id, req.body);
+    // If admin supplied a new password, hash it and sync the linked User account
+    if (password && String(password).trim()) {
+      const passwordHash = await bcrypt.hash(String(password).trim(), 12);
+
+      // Update the Distributor record's plain-text password field (legacy design)
+      rest.password = String(password).trim();
+
+      // Sync the linked User's hashed password so login still works
+      await User.findOneAndUpdate(
+        { distributor_id: id },
+        { passwordHash },
+        { new: false }
+      );
+    }
+
+    const distributor = await distributorService.updateDistributor(id, rest);
     if (!distributor) {
       return res.status(404).json({ message: "Distributor not found" });
     }

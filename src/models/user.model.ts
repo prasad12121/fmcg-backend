@@ -29,6 +29,11 @@ const userSchema = new mongoose.Schema(
       ref: "Distributor",
       default: null,
     },
+    outlet_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Outlet",
+      default: null,
+    },
     authCode: {
       type: String,
       select: false,

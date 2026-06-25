@@ -7,7 +7,7 @@ class VehicleService {
     }
 
     async getVehicles(filter: Record<string, any> = {}) {
-        return await vehicleRepository.find(filter);
+        return await vehicleRepository.find(filter, ["distributor_id"]);
     }
 
     async getVehicle(id: string) {

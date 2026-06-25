@@ -1,5 +1,7 @@
+import bcrypt from "bcryptjs";
 import { request, response } from "express";
 
+import User from "../models/user.model";
 import outletService from "../services/outlet.service";
 
 
@@ -13,6 +15,31 @@ export const createOutlet = async (req = request, res = response) => {
     }
 
     const outlet = await outletService.createOutlet(data);
+
+    // Create a linked User account so the outlet can log in (mirrors createDistributor)
+    const normalizedEmail = String(data.email || "").toLowerCase().trim();
+    if (normalizedEmail && data.password) {
+      const existingUser = await User.findOne({ email: normalizedEmail });
+      if (!existingUser) {
+        const passwordHash = await bcrypt.hash(String(data.password), 12);
+        await User.create({
+          name: String(data.owner_name || data.name || normalizedEmail),
+          email: normalizedEmail,
+          passwordHash,
+          role: "outlet",
+          outlet_id: (outlet as any)._id,
+          isVerified: true,
+        });
+      } else {
+        // Link existing user to this outlet
+        await User.findByIdAndUpdate(existingUser._id, {
+          role: "outlet",
+          outlet_id: (outlet as any)._id,
+          isVerified: true,
+        });
+      }
+    }
+
     res.status(201).json(outlet);
   } catch (error: any) {
     if (error.code === 11000) {
@@ -83,7 +110,18 @@ export const getOutlet = async (req = request, res = response) => {
 export const updateOutlet = async (req = request, res = response) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const body = { ...req.body };
+    const { password, ...body } = req.body;
+
+    // If a new password was provided, hash it and sync the linked User account
+    if (password && String(password).trim()) {
+      const passwordHash = await bcrypt.hash(String(password).trim(), 12);
+      body.password = String(password).trim(); // keep plain text in Outlet record (legacy)
+      await User.findOneAndUpdate(
+        { outlet_id: id },
+        { passwordHash },
+        { new: false }
+      );
+    }
 
     // Distributor: may only update outlets under their own account
     if (req.user?.role === "Distributor") {

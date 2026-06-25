@@ -28,6 +28,7 @@ export const getVariant = async (req = request, res = response) => {
       : {};
     const did = distId(req);
     if (did) filter.distributor_id = did;
+    else if (req.query.distributor_id) filter.distributor_id = req.query.distributor_id;
     const variants = await variantService.getVariants(filter);
     res.status(200).json(variants);
   } catch (error) {

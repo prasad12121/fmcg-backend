@@ -134,10 +134,10 @@ class OrderService {
         throw new Error(`Invalid quantity for ${variantLabel}`);
       }
 
-      const stock = await stockService.getStocks(
-        data.distributor_id,
-        item.variant_id,
-      );
+      const stock = await stockService.getStocks({
+        distributor_id: data.distributor_id,
+        variant_id: item.variant_id,
+      });
 
       if (stock.length === 0 || stock[0].quantity < quantity) {
         const available = stock[0]?.quantity ?? 0;

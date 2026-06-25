@@ -21,11 +21,15 @@ export const addStock = async (req = request, res = response) => {
 
 export const getStocks = async (req = request, res = response) => {
   try {
-    // If Distributor, always force their own ID; ignore query param
+    const filter: Record<string, any> = {};
     const did = distId(req);
-    const distributor_id = did ?? (req.query.distributor_id?.toString() || "");
-    const variant_id = req.query.variant_id?.toString() || "";
-    const stocks = await stockService.getStocks(distributor_id, variant_id);
+    if (did) {
+      filter.distributor_id = did;
+    } else if (req.query.distributor_id) {
+      filter.distributor_id = req.query.distributor_id;
+    }
+    if (req.query.variant_id) filter.variant_id = req.query.variant_id;
+    const stocks = await stockService.getStocks(filter);
     res.status(200).json(stocks);
   } catch (error) {
     console.error(error);

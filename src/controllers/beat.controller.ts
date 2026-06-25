@@ -32,6 +32,7 @@ export const getBeats = async (req = request, res = response) => {
     else if (city_id) filter.city_id = city_id;
     const did = distId(req);
     if (did) filter.distributor_id = did;
+    else if (req.query.distributor_id) filter.distributor_id = req.query.distributor_id;
     const beats = await beatService.getBeats(filter);
     res.status(200).json(beats);
   } catch (error) {

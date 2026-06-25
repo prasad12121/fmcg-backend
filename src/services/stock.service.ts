@@ -1,15 +1,11 @@
-import { populate } from "dotenv";
 import stockRepository from "../repositories/stock.repository";
 import stockLedgerRepository from "../repositories/stockLedger.repository";
 
-
 class StockService {
   async addStock(data: any) {
+    console.log("Adding Stock:", data);
 
-   console.log("Adding Stock:", data);
-    // 1️⃣ Add Ledger Entry
     await stockLedgerRepository.create({
-
       distributor_id: data.distributor_id,
       variant_id: data.variant_id,
       quantity: data.quantity,
@@ -17,34 +13,24 @@ class StockService {
       reference_id: data.reference_id,
     });
 
-    // 2️⃣ Check Existing Stock
     const stock = await stockRepository.findByDistributorVariant(
       data.distributor_id,
       data.variant_id
     );
 
     if (stock) {
-
-      // 3️⃣ Update Quantity
       stock.quantity += data.quantity;
-
       await stock.save();
-
     } else {
-
-      // 4️⃣ Create New Stock
       await stockRepository.create({
         distributor_id: data.distributor_id,
         variant_id: data.variant_id,
         quantity: data.quantity,
       });
-
     }
   }
 
   async dispatchStock(data: any) {
-
-    // 1️⃣ Add Ledger Entry
     await stockLedgerRepository.create({
       distributor_id: data.distributor_id,
       variant_id: data.variant_id,
@@ -53,55 +39,43 @@ class StockService {
       reference_id: data.order_id,
     });
 
-    // 2️⃣ Get Stock
     const stock = await stockRepository.findByDistributorVariant(
       data.distributor_id,
       data.variant_id
     );
 
-    if (!stock) {
-      throw new Error("Stock not found");
-    }
+    if (!stock) throw new Error("Stock not found");
+    if (stock.quantity < data.quantity) throw new Error("Insufficient Stock");
 
-    if (stock.quantity < data.quantity) {
-      throw new Error("Insufficient Stock");
-    }
-
-    // 3️⃣ Deduct Quantity
     stock.quantity -= data.quantity;
-
     await stock.save();
   }
 
-
- async getStocks(distributor_id: string, variant_id: string) {
-    return await stockRepository.find({
-      distributor_id,
-      variant_id,
-    });
+  /** List stocks with optional distributor / variant filter + populate */
+  async getStocks(filter: Record<string, any> = {}) {
+    const cleanFilter: Record<string, any> = {};
+    for (const [k, v] of Object.entries(filter)) {
+      if (v !== "" && v !== null && v !== undefined) cleanFilter[k] = v;
+    }
+    return stockRepository.find(cleanFilter, ["variant_id", "distributor_id"]);
   }
-
 
   async updateStock(id: string, data: any) {
-    return await stockRepository.update(id, data);
+    return stockRepository.update(id, data);
   }
-  
 
-async getStock(filter: Record<string, any> = {}) {
-  const stocks = await stockRepository.find(filter, ["variant_id"]);
-
-  return stocks.filter((item: any) =>
-    item.variant_id?.name
-      ?.toLowerCase()
-      .includes(filter?.name?.$regex?.toLowerCase() || "")
-  );
-}
+  async getStock(filter: Record<string, any> = {}) {
+    const stocks = await stockRepository.find(filter, ["variant_id", "distributor_id"]);
+    return stocks.filter((item: any) =>
+      item.variant_id?.name
+        ?.toLowerCase()
+        .includes(filter?.name?.$regex?.toLowerCase() || "")
+    );
+  }
 
   async getStockLedgerEntries(filter: Record<string, any> = {}) {
-    return await stockLedgerRepository.getEntries(filter);
+    return stockLedgerRepository.getEntries(filter);
   }
-
-  
 }
 
 export default new StockService();

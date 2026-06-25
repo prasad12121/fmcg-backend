@@ -7,7 +7,7 @@ class CategoryService {
   }
 
   async getCategories(filter: Record<string, any> = {}) {
-    return await categoryRepository.find(filter);
+    return await categoryRepository.find(filter, ["distributor_id"]);
   }
 
   async getCategory(id: string) {

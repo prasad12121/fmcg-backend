@@ -11,7 +11,7 @@ export const createBrand = async (req = request, res = response) => {
   try {
     const data = { ...req.body };
     const did = distId(req);
-    if (did) data.distributor_id = did; // auto-stamp; Distributor cannot override
+    if (did) data.distributor_id = did;
     const brand = await brandService.createBrand(data);
     res.status(201).json(brand);
   } catch (error: any) {
@@ -29,6 +29,7 @@ export const getBrands = async (req = request, res = response) => {
       : {};
     const did = distId(req);
     if (did) filter.distributor_id = did;
+    else if (req.query.distributor_id) filter.distributor_id = req.query.distributor_id;
     const brands = await brandService.getBrands(filter);
     res.status(200).json(brands);
   } catch (error) {
@@ -59,7 +60,7 @@ export const updateBrand = async (req = request, res = response) => {
       if (!existing) return res.status(404).json({ message: "Brand not found" });
       if (String((existing as any).distributor_id) !== did)
         return res.status(403).json({ message: "You can only edit your own brands" });
-      delete req.body.distributor_id; // prevent reassignment
+      delete req.body.distributor_id;
     }
     const brand = await brandService.updateBrand(id, req.body);
     if (!brand) return res.status(404).json({ message: "Brand not found" });

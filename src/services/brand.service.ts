@@ -7,7 +7,7 @@ class BrandService {
   }
 
   async getBrands(filter: Record<string, any> = {}) {
-    return await brandRepository.find(filter);
+    return await brandRepository.find(filter, ["distributor_id"]);
   }
 
   async getBrand(id: string) {

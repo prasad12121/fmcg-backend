@@ -12,6 +12,7 @@ class VariantService {
       "product_id",
       "name",
       "unit_id",
+      "distributor_id",
     ]);
 
     //get price for each variant

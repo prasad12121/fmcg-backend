@@ -11,6 +11,8 @@ export const createProduct = async (req = request, res = response) => {
     const data = { ...req.body };
     const did = distId(req);
     if (did) data.distributor_id = did;
+    // Coerce empty string / "null" to null so the ObjectId field never gets an invalid string
+    if (!data.distributor_id) data.distributor_id = null;
     const product = await productService.createProduct(data);
     res.status(201).json(product);
   } catch (error: any) {
@@ -30,6 +32,7 @@ export const getProducts = async (req = request, res = response) => {
     if (category_id) filter.category_id = category_id;
     const did = distId(req);
     if (did) filter.distributor_id = did;
+    else if (req.query.distributor_id) filter.distributor_id = req.query.distributor_id;
     const products = await productService.getProducts(filter);
     res.status(200).json(products);
   } catch (error) {
@@ -62,6 +65,9 @@ export const updateProduct = async (req = request, res = response) => {
         return res.status(403).json({ message: "You can only edit your own products" });
       delete req.body.distributor_id;
     }
+    // Coerce empty string / "null" to null so the ObjectId field never gets an invalid string
+    if (req.body.distributor_id !== undefined && !req.body.distributor_id)
+      req.body.distributor_id = null;
     const product = await productService.updateProduct(id, req.body);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.status(200).json(product);

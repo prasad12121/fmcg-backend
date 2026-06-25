@@ -7,6 +7,7 @@ declare global {
       role: "SuperAdmin" | "Distributor" | "outlet";
       email: string;
       distributor_id?: string | null;
+      outlet_id?: string | null;
     }
 
     interface Request {

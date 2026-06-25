@@ -25,6 +25,13 @@ const productSchema = new mongoose.Schema(
     default: ""
   },
 
+  distributor_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Distributor",
+    default: null,
+    index: true,
+  },
+
   status: {
     type: String,
     enum: ["active","inactive"],

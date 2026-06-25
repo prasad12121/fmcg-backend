@@ -32,6 +32,8 @@ class PaymentService {
       order_number: payment.order_id?.order_number || "",
       outlet_id: payment.outlet_id?._id || payment.outlet_id,
       outlet_name: payment.outlet_id?.name || "",
+      distributor_id: payment.distributor_id?._id || payment.distributor_id,
+      distributor_name: payment.distributor_id?.name || "",
       payment_date: payment.payment_date,
       payment_mode: payment.payment_mode,
       amount_paid: payment.amount_paid,

@@ -16,6 +16,9 @@ export const signAuthToken = (user: UserDocument) => {
       distributor_id: (user as any).distributor_id
         ? (user as any).distributor_id.toString()
         : null,
+      outlet_id: (user as any).outlet_id
+        ? (user as any).outlet_id.toString()
+        : null,
     },
     secret,
     {
