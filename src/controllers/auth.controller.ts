@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
 import User from "../models/user.model";
+import Distributor from "../models/distributor.model";
+import Outlet from "../models/outlet.omodel";
 import { signAuthToken } from "../utils/jwt";
 import { sendOtpEmail } from "../utils/mailer";
 import { generateOtp, generateOtpExpiry } from "../utils/otp";
@@ -165,6 +167,32 @@ export const login = async (req: Request, res: Response) => {
         message: "Please verify your account before logging in",
         code: "ACCOUNT_NOT_VERIFIED",
       });
+    }
+
+    // ── Status check: block inactive Distributors ────────────────────────────
+    if (user.role === "Distributor" && (user as any).distributor_id) {
+      const distributor = await Distributor.findById(
+        (user as any).distributor_id
+      ).select("status").lean();
+      if (!distributor || (distributor as any).status !== "active") {
+        return res.status(403).json({
+          message: "Your account has been deactivated. Please contact the administrator.",
+          code: "ACCOUNT_DEACTIVATED",
+        });
+      }
+    }
+
+    // ── Status check: block inactive Outlets ─────────────────────────────────
+    if (user.role === "outlet" && (user as any).outlet_id) {
+      const outlet = await Outlet.findById(
+        (user as any).outlet_id
+      ).select("status").lean();
+      if (!outlet || (outlet as any).status !== "active") {
+        return res.status(403).json({
+          message: "Your account has been deactivated. Please contact the administrator.",
+          code: "ACCOUNT_DEACTIVATED",
+        });
+      }
     }
 
     const token = signAuthToken(user as any);

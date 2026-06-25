@@ -73,6 +73,12 @@ class StockService {
     );
   }
 
+  /** Fetch a single stock record by its MongoDB _id. Used for ownership checks.
+   *  Do NOT populate distributor_id — we need the raw ObjectId for string comparison. */
+  async getStockById(id: string) {
+    return stockRepository.findById(id);
+  }
+
   async getStockLedgerEntries(filter: Record<string, any> = {}) {
     return stockLedgerRepository.getEntries(filter);
   }

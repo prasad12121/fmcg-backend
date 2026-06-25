@@ -40,7 +40,7 @@ export const getStocks = async (req = request, res = response) => {
 export const getStock = async (req = request, res = response) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const stock = await stockService.getStock({ _id: id });
+    const stock = await stockService.getStockById(id);
     if (!stock) return res.status(404).json({ message: "Stock not found" });
     const did = distId(req);
     if (did && String((stock as any).distributor_id) !== did)
@@ -77,7 +77,7 @@ export const updateStock = async (req = request, res = response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const did = distId(req);
     if (did) {
-      const existing = await stockService.getStock({ _id: id });
+      const existing = await stockService.getStockById(id);
       if (!existing) return res.status(404).json({ message: "Stock not found" });
       if (String((existing as any).distributor_id) !== did)
         return res.status(403).json({ message: "You can only edit your own stock records" });

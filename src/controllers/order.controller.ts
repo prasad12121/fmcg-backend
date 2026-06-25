@@ -3,9 +3,35 @@ import mongoose from "mongoose";
 
 import orderService from "../services/order.service";
 import OrderItem from "../models/orderItems.model";
+import Outlet from "../models/outlet.omodel";
 
 export const createOrder = async (req = request, res = response) => {
   try {
+    // ── SuperAdmin: validate outlet belongs to the selected distributor ───────
+    // Distributors can only create orders for their own outlets (enforced via JWT
+    // distributor_id stamp in the service layer), so this guard is Admin-only.
+    if (req.user?.role === "SuperAdmin") {
+      const { outlet_id, distributor_id } = req.body;
+
+      if (!outlet_id || !distributor_id) {
+        return res.status(400).json({ message: "outlet_id and distributor_id are required." });
+      }
+
+      const outlet = await Outlet.findById(outlet_id).select("distributor_id").lean();
+      if (!outlet) {
+        return res.status(400).json({ message: "Outlet not found." });
+      }
+
+      const outletDistId = String((outlet as any).distributor_id ?? "");
+      const orderDistId  = String(distributor_id);
+
+      if (!outletDistId || outletDistId !== orderDistId) {
+        return res.status(400).json({
+          message: "Outlet does not belong to the selected distributor. Please select a valid outlet.",
+        });
+      }
+    }
+
     const order = await orderService.createOrder(req.body);
     res.status(201).json(order);
   } catch (error) {
