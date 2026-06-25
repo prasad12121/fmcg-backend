@@ -23,7 +23,8 @@
  *   areas       { name: 1 }  { name: 1, city_id: 1 }
  *   beats       { name: 1 }  { name: 1, area_id: 1 }
  *   products    { name: 1 }
- *   outlets     { name: 1 }  { outlet_number: 1 }
+ *   outlets     { name: 1 }  { outlet_number: 1 }  { email: 1 }  { username: 1 }
+ *               { open_time: 1 }  { close_time: 1 }
  */
 
 import mongoose from "mongoose";
@@ -122,12 +123,18 @@ export async function fixIndexes(): Promise<void> {
   await dropIfExists(products, { name: 1 });
 
   // ── outlets ───────────────────────────────────────────────────────────────
-  // Old: { name: 1 } unique  AND  { outlet_number: 1 } unique
-  // New: { name: 1, distributor_id: 1 } unique
-  //      { outlet_number: 1, distributor_id: 1 } unique
+  // Old: { name: 1 }  { outlet_number: 1 }  { email: 1 }  { username: 1 }
+  //      { open_time: 1 }  { close_time: 1 }  — all globally unique
+  // New: { name: 1, distributor_id: 1 }  { outlet_number: 1, distributor_id: 1 }
+  //      { email: 1, distributor_id: 1 }  { username: 1, distributor_id: 1 }
+  //      open_time / close_time — no uniqueness constraint at all
   const outlets = db.collection("outlets");
   await dropIfExists(outlets, { name: 1 });
   await dropIfExists(outlets, { outlet_number: 1 });
+  await dropIfExists(outlets, { email: 1 });
+  await dropIfExists(outlets, { username: 1 });
+  await dropIfExists(outlets, { open_time: 1 });
+  await dropIfExists(outlets, { close_time: 1 });
 
   console.log("[fixIndexes] Index cleanup complete.");
 }

@@ -30,14 +30,17 @@ export const createOutlet = async (req = request, res = response) => {
           outlet_id: (outlet as any)._id,
           isVerified: true,
         });
-      } else {
-        // Link existing user to this outlet
+      } else if (!(existingUser as any).outlet_id) {
+        // User exists but is not linked to any outlet — link to this one
         await User.findByIdAndUpdate(existingUser._id, {
           role: "outlet",
           outlet_id: (outlet as any)._id,
           isVerified: true,
         });
       }
+      // If existingUser.outlet_id already points to a different outlet (cross-distributor
+      // email reuse), do NOT overwrite it — that outlet owner's login must remain intact.
+      // The new outlet is created successfully; they will need a separate login email.
     }
 
     res.status(201).json(outlet);
@@ -49,12 +52,10 @@ export const createOutlet = async (req = request, res = response) => {
         outlet_number: "Outlet Code",
         email:         "Email",
         username:      "Username",
-        open_time:     "Open Time",
-        close_time:    "Close Time",
       };
       const conflictField = Object.keys(keyPattern)[0] ?? "";
       const label = fieldLabelMap[conflictField] || conflictField || "A field";
-      return res.status(409).json({ message: `${label} already exists. Please use a unique value.` });
+      return res.status(409).json({ message: `${label} already exists for this distributor.` });
     }
     res.status(500).json({ message: "Error creating outlet", error: error.message });
   }
@@ -156,12 +157,10 @@ export const updateOutlet = async (req = request, res = response) => {
         outlet_number: "Outlet Code",
         email:         "Email",
         username:      "Username",
-        open_time:     "Open Time",
-        close_time:    "Close Time",
       };
       const conflictField = Object.keys(keyPattern)[0] ?? "";
       const label = fieldLabelMap[conflictField] || conflictField || "A field";
-      return res.status(409).json({ message: `${label} already exists. Please use a unique value.` });
+      return res.status(409).json({ message: `${label} already exists for this distributor.` });
     }
     res.status(500).json({ message: "Error updating outlet", error: error.message });
   }

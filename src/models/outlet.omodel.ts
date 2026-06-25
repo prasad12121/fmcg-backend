@@ -12,14 +12,12 @@ const outletSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     close_time: {
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     outlet_number: {
@@ -85,14 +83,12 @@ const outletSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     username: {
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     password: {
@@ -158,9 +154,11 @@ const outletSchema = new mongoose.Schema(
   },
 );
 
-// Outlet name and outlet_number unique per distributor — different distributors may share the same values
+// All uniqueness is per-distributor — different distributors may share the same values
 outletSchema.index({ name: 1, distributor_id: 1 }, { unique: true });
 outletSchema.index({ outlet_number: 1, distributor_id: 1 }, { unique: true });
+outletSchema.index({ email: 1, distributor_id: 1 }, { unique: true });
+outletSchema.index({ username: 1, distributor_id: 1 }, { unique: true });
 
 const Outlet = mongoose.model("Outlet", outletSchema);
 export default Outlet;
