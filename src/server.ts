@@ -34,6 +34,7 @@ import returnsRoutes from "./routes/returns.routes";
 import paymentRoutes from "./routes/payment.routes";
 import schemeRoutes from "./routes/scheme.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
+import outletPortalRoutes from "./routes/outlet-portal.routes";
 
 connectDB();
 
@@ -105,6 +106,7 @@ app.use("/api/returns", returnsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/schemes", schemeRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/outlet-portal", outletPortalRoutes);
 
 app.use(
   (

@@ -13,6 +13,7 @@ const sanitizeUser = (user: any) => ({
   email: user.email,
   role: user.role,
   distributor_id: user.distributor_id ?? null,
+  outlet_id: user.outlet_id ?? null,
   isVerified: user.isVerified,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -53,7 +54,7 @@ export const register = async (req: Request, res: Response) => {
             authCodeExpiry,
             isVerified: false,
           },
-          { new: true, runValidators: true }
+          { returnDocument: "after", runValidators: true }
         )
       : await User.create({
           name,
@@ -143,20 +144,55 @@ export const verifyCode = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: normalizedEmail }).select(
-      "+passwordHash"
-    );
+    // Accept `identifier` (email or username) or legacy `email` field
+    const identifier = String(req.body.identifier || req.body.email || "").trim();
+    const password   = String(req.body.password || "");
+
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Email/username and password are required" });
+    }
+
+    const normalizedIdentifier = identifier.toLowerCase();
+
+    console.log(`[Login] identifier="${normalizedIdentifier}"`);
+
+    // ── Step 1: Direct User lookup by email ──────────────────────────────────
+    let user = await User.findOne({ email: normalizedIdentifier }).select("+passwordHash");
+
+    // ── Step 2: Username / email fallback through Outlet collection ───────────
+    // Handles: outlet has username that isn't email-format, or a User record
+    // was created with a different email casing than what's stored on the Outlet.
+    if (!user) {
+      console.log(`[Login] No User by email — trying outlet username/email lookup`);
+      const outletDoc = await Outlet.findOne({
+        $or: [
+          { username: identifier },
+          { username: normalizedIdentifier },
+          { email: normalizedIdentifier },
+        ],
+      }).select("_id email username").lean();
+
+      if (outletDoc) {
+        console.log(`[Login] Outlet found (id=${(outletDoc as any)._id}) — looking up linked User`);
+        user = await User.findOne({ outlet_id: (outletDoc as any)._id }).select("+passwordHash");
+        if (!user) {
+          console.error(
+            `[Login] Outlet ${(outletDoc as any)._id} has no linked User record. ` +
+            `Restart the backend to trigger migrateOutletUsers(), or recreate the outlet.`
+          );
+        }
+      }
+    }
 
     if (!user) {
+      console.log(`[Login] Authentication failed — no user found for identifier="${normalizedIdentifier}"`);
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const passwordMatches = await bcrypt.compare(
-      password,
-      String(user.passwordHash)
-    );
+    console.log(`[Login] User found: id=${user._id} email=${user.email} role=${user.role}`);
+
+    const passwordMatches = await bcrypt.compare(password, String(user.passwordHash));
+    console.log(`[Login] Password match: ${passwordMatches}`);
 
     if (!passwordMatches) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -203,6 +239,7 @@ export const login = async (req: Request, res: Response) => {
       user: sanitizeUser(user),
     });
   } catch (error) {
+    console.error("[Login] Unexpected error:", error);
     return res.status(500).json({
       message: error instanceof Error ? error.message : "Login failed",
     });

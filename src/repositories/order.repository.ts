@@ -250,7 +250,7 @@ class OrderRepository extends BaseRepository<any> {
           total_tax: data.total_tax || 0,
           grand_total: data.grand_total,
         },
-        { new: true, session }
+        { returnDocument: "after", session }
       );
   
       if (!updatedOrder) {
@@ -379,6 +379,207 @@ class OrderRepository extends BaseRepository<any> {
     ];
 
     return this.model.aggregate(pipeline).exec();
+  }
+
+  /**
+   * Full order detail for the Outlet role.
+   * Joins: order items (with variant), dispatch, invoice, outlet, distributor.
+   * The outletId guard means the outlet can only ever fetch their own orders.
+   */
+  async getOutletOrderDetail(orderId: string, outletId: string) {
+    if (
+      !mongoose.Types.ObjectId.isValid(orderId) ||
+      !mongoose.Types.ObjectId.isValid(outletId)
+    ) {
+      return null;
+    }
+
+    const pipeline: mongoose.PipelineStage[] = [
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(orderId),
+          outlet_id: new mongoose.Types.ObjectId(outletId),
+        },
+      },
+      // ── Order items ────────────────────────────────────────────────
+      {
+        $lookup: {
+          from: "orderitems",
+          localField: "_id",
+          foreignField: "order_id",
+          as: "rawItems",
+        },
+      },
+      // ── Variant details for each item ──────────────────────────────
+      {
+        $lookup: {
+          from: "variants",
+          localField: "rawItems.variant_id",
+          foreignField: "_id",
+          as: "variantDocs",
+        },
+      },
+      // ── Outlet info ────────────────────────────────────────────────
+      {
+        $lookup: {
+          from: "outlets",
+          localField: "outlet_id",
+          foreignField: "_id",
+          as: "outletDoc",
+        },
+      },
+      { $unwind: { path: "$outletDoc", preserveNullAndEmptyArrays: true } },
+      // ── Distributor info ───────────────────────────────────────────
+      {
+        $lookup: {
+          from: "distributors",
+          localField: "distributor_id",
+          foreignField: "_id",
+          as: "distributorDoc",
+        },
+      },
+      { $unwind: { path: "$distributorDoc", preserveNullAndEmptyArrays: true } },
+      // ── Invoice ────────────────────────────────────────────────────
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "order_id",
+          as: "invoiceDoc",
+        },
+      },
+      { $unwind: { path: "$invoiceDoc", preserveNullAndEmptyArrays: true } },
+      // ── Dispatch ───────────────────────────────────────────────────
+      {
+        $lookup: {
+          from: "dispatches",
+          localField: "_id",
+          foreignField: "order_id",
+          as: "dispatchDoc",
+        },
+      },
+      { $unwind: { path: "$dispatchDoc", preserveNullAndEmptyArrays: true } },
+      // ── Shape the response ─────────────────────────────────────────
+      {
+        $project: {
+          _id: 1,
+          order_number: 1,
+          order_date: 1,
+          status: 1,
+          subtotal: 1,
+          gst: 1,
+          total_discount: 1,
+          total_tax: 1,
+          grand_total: 1,
+          createdAt: 1,
+          updatedAt: 1,
+
+          outlet_name: "$outletDoc.name",
+          outlet_address: "$outletDoc.address",
+          outlet_mobile: "$outletDoc.mobile",
+
+          distributor_name: "$distributorDoc.name",
+          distributor_mobile: "$distributorDoc.mobile",
+
+          invoice_number: "$invoiceDoc.invoice_number",
+          invoice_status: "$invoiceDoc.status",
+
+          dispatch: {
+            $cond: {
+              if: { $gt: ["$dispatchDoc._id", null] },
+              then: {
+                dispatch_date: "$dispatchDoc.dispatch_date",
+                delivered_date: "$dispatchDoc.delivered_date",
+                vehicle_number: "$dispatchDoc.vehicle_number",
+                driver_name: "$dispatchDoc.driver_name",
+                dispatch_status: "$dispatchDoc.status",
+              },
+              else: null,
+            },
+          },
+
+          // Merge variant info into each item using $map + $filter
+          items: {
+            $map: {
+              input: "$rawItems",
+              as: "item",
+              in: {
+                _id: "$$item._id",
+                variant_id: "$$item.variant_id",
+                variant_name: {
+                  $let: {
+                    vars: {
+                      v: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$variantDocs",
+                              as: "vd",
+                              cond: { $eq: ["$$vd._id", "$$item.variant_id"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: { $ifNull: ["$$v.name", "Unknown"] },
+                  },
+                },
+                sku_code: {
+                  $let: {
+                    vars: {
+                      v: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$variantDocs",
+                              as: "vd",
+                              cond: { $eq: ["$$vd._id", "$$item.variant_id"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: { $ifNull: ["$$v.sku_code", ""] },
+                  },
+                },
+                pack_size: {
+                  $let: {
+                    vars: {
+                      v: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$variantDocs",
+                              as: "vd",
+                              cond: { $eq: ["$$vd._id", "$$item.variant_id"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: { $ifNull: ["$$v.pack_size", ""] },
+                  },
+                },
+                quantity: "$$item.quantity",
+                base_quantity: "$$item.base_quantity",
+                uom_quantities: "$$item.uom_quantities",
+                free_quantity: "$$item.free_quantity",
+                price: "$$item.price",
+                gst_rate: "$$item.gst_rate",
+                tax: "$$item.tax",
+                total: "$$item.total",
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    const results = await this.model.aggregate(pipeline).exec();
+    return results[0] ?? null;
   }
 
   async getDispatchReadyOrders(filters: {

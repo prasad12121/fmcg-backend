@@ -161,7 +161,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { role },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!user) {

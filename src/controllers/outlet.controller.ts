@@ -31,11 +31,14 @@ export const createOutlet = async (req = request, res = response) => {
           isVerified: true,
         });
       } else if (!(existingUser as any).outlet_id) {
-        // User exists but is not linked to any outlet — link to this one
+        // User exists but is not linked to any outlet — link to this one and
+        // sync the passwordHash so the outlet's current password takes effect.
+        const passwordHash = await bcrypt.hash(String(data.password), 12);
         await User.findByIdAndUpdate(existingUser._id, {
           role: "outlet",
           outlet_id: (outlet as any)._id,
           isVerified: true,
+          passwordHash,
         });
       }
       // If existingUser.outlet_id already points to a different outlet (cross-distributor
@@ -114,6 +117,15 @@ export const updateOutlet = async (req = request, res = response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { password, ...body } = req.body;
 
+    // Never allow distributor_id to be cleared to null/empty via an update.
+    // A valid ObjectId string is required to change the assignment; an empty/falsy
+    // value means "no change requested" and must be stripped so the existing DB
+    // value is preserved.  This prevents accidental de-assignment when a form
+    // serialises an empty autocomplete as "" or omits the field entirely.
+    if (!body.distributor_id) {
+      delete body.distributor_id;
+    }
+
     // If a new password was provided, hash it and sync the linked User account
     if (password && String(password).trim()) {
       const passwordHash = await bcrypt.hash(String(password).trim(), 12);
@@ -121,7 +133,7 @@ export const updateOutlet = async (req = request, res = response) => {
       await User.findOneAndUpdate(
         { outlet_id: id },
         { passwordHash },
-        { new: false }
+        { returnDocument: "before" }
       );
     }
 

@@ -27,7 +27,8 @@
     "seed:vehicles": "ts-node seeder/vehicleSeeder.ts",
     "seed:drivers": "ts-node seeder/driverSeeder.ts",
     "seed:dispatches": "ts-node seeder/dispatchSeeder.ts",
-    "migrate:variantFields": "ts-node seeder/backfillVariantFields.ts"
+    "migrate:variantFields": "ts-node seeder/backfillVariantFields.ts",
+    "seed:admin": "ts-node src/utils/seedAdmin.ts"
   },
   "keywords": [],
   "author": "",

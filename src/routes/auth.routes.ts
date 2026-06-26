@@ -27,7 +27,15 @@ router.post(
 
 router.post(
   "/login",
-  body("email").isEmail().withMessage("Valid email is required"),
+  // Accept `identifier` (email or username) OR legacy `email` field.
+  // At least one must be a non-empty string of 3+ chars.
+  body().custom((_, { req }) => {
+    const id = String(req.body?.identifier || req.body?.email || "").trim();
+    if (!id || id.length < 3) {
+      throw new Error("Email or username is required (min 3 characters)");
+    }
+    return true;
+  }),
   body("password").notEmpty().withMessage("Password is required"),
   handleValidation,
   asyncHandler(login)

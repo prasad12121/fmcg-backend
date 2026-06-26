@@ -24,11 +24,11 @@ export default class BaseRepository<T extends Document> {
   }
 
   async update(id: string, data: Partial<T>): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
+    return await this.model.findByIdAndUpdate(id, data, { returnDocument: "after" });
   }
 
   async findByIdAndUpdate(id: string, data: Partial<T>): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
+    return await this.model.findByIdAndUpdate(id, data, { returnDocument: "after" });
   }
 
   async findByIdAndDelete(id: string): Promise<T | null> {

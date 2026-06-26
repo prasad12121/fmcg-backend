@@ -345,6 +345,11 @@ class OrderService {
     return await orderItemRepository.findByOrderIds(orderIds);
   }
 
+  /** Full order detail for the Outlet role (items + dispatch + invoice). */
+  async getOutletOrderById(id: string, outletId: string) {
+    return orderRepository.getOutletOrderDetail(id, outletId);
+  }
+
   async getDispatchReadyOrders(filters: {
     beat_id?: string;
     outlet_id?: string;

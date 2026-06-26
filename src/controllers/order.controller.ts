@@ -8,8 +8,6 @@ import Outlet from "../models/outlet.omodel";
 export const createOrder = async (req = request, res = response) => {
   try {
     // ── SuperAdmin: validate outlet belongs to the selected distributor ───────
-    // Distributors can only create orders for their own outlets (enforced via JWT
-    // distributor_id stamp in the service layer), so this guard is Admin-only.
     if (req.user?.role === "SuperAdmin") {
       const { outlet_id, distributor_id } = req.body;
 
@@ -30,6 +28,33 @@ export const createOrder = async (req = request, res = response) => {
           message: "Outlet does not belong to the selected distributor. Please select a valid outlet.",
         });
       }
+    }
+
+    // ── Outlet: auto-stamp outlet_id and distributor_id from backend ──────────
+    // The client sends only the items; we derive the rest from the JWT and the
+    // outlet record so the outlet cannot forge another outlet's order.
+    if (req.user?.role === "outlet" && req.user.outlet_id) {
+      const outletDoc = await Outlet.findById(req.user.outlet_id)
+        .select("distributor_id status")
+        .lean();
+
+      if (!outletDoc) {
+        return res.status(400).json({ message: "Your outlet account was not found." });
+      }
+      if ((outletDoc as any).status !== "active") {
+        return res.status(403).json({ message: "Your outlet account is not active." });
+      }
+
+      const distributorId = (outletDoc as any).distributor_id;
+      if (!distributorId) {
+        return res.status(400).json({
+          message: "No distributor is assigned to your outlet. Please contact your distributor.",
+        });
+      }
+
+      // Force correct ids — ignore anything the client may have sent
+      req.body.outlet_id      = String(req.user.outlet_id);
+      req.body.distributor_id = String(distributorId);
     }
 
     const order = await orderService.createOrder(req.body);
@@ -64,6 +89,11 @@ export const getOrders = async (req = request, res = response) => {
       filter.distributor_id = new mongoose.Types.ObjectId(req.user.distributor_id);
     }
 
+    // Outlet sees only orders that belong to their outlet
+    if (req.user?.role === "outlet" && req.user.outlet_id) {
+      filter.outlet_id = new mongoose.Types.ObjectId(req.user.outlet_id);
+    }
+
     // SuperAdmin can optionally filter by a specific distributor
     if (req.user?.role === "SuperAdmin" && distributor_id && mongoose.Types.ObjectId.isValid(distributor_id)) {
       filter.distributor_id = new mongoose.Types.ObjectId(distributor_id);
@@ -86,9 +116,37 @@ export const getOrder = async (req = request, res = response) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
+    // Outlet role: verify this order belongs to the requesting outlet
+    if (req.user?.role === "outlet" && req.user.outlet_id) {
+      const orderId = String(order.outlet_id ?? "");
+      if (orderId !== String(req.user.outlet_id)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    }
     res.status(200).json(order);
   } catch (error) {
     res.status(500).json({ message: "Error fetching order", error });
+  }
+};
+
+// ── Outlet-specific order detail (includes dispatch & timeline) ──────────────
+export const getOutletOrderDetail = async (req = request, res = response) => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const outletId = req.user?.outlet_id;
+
+    if (!outletId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const order = await orderService.getOutletOrderById(id, outletId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json(order);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching order detail", error });
   }
 };
 

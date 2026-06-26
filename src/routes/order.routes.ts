@@ -13,12 +13,16 @@ import {
   updateOrderWithOrderItems,
   getItemsByOrderIds,
   getDispatchReadyOrders,
+  getOutletOrderDetail,
 } from "../controllers/order.controller";
 
 const router = express.Router();
 
 // All authenticated roles can access orders
 router.use(authenticate, authorize("SuperAdmin", "Distributor", "outlet"));
+
+// ── Outlet-only: full order detail with dispatch & timeline ─────────────────
+router.get("/outlet-detail/:id", getOutletOrderDetail);
 
 router.post("/", createOrder);
 router.post("/items-by-ids", getItemsByOrderIds);

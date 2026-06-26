@@ -91,7 +91,7 @@ export const updateDistributor = async (req = request, res = response) => {
       await User.findOneAndUpdate(
         { distributor_id: id },
         { passwordHash },
-        { new: false }
+        { returnDocument: "before" }
       );
     }
 
